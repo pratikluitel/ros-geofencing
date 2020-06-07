@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 import rospy
-from std_msgs.msg import String, Float32MultiArray
+from std_msgs.msg import String, Float32MultiArray, Empty
 
-pub = rospy.Publisher('/geofence_status', String, queue_size=100)
+pub = rospy.Publisher('/geofence_status', Float32MultiArray, queue_size=100)
 #flag = 0
-xfence = (-3.75, 5)
-yfence = (-5, 3.75)
-zfence = (0, 5.5)
+xfence = (-5, 5)
+yfence = (-5, 5)
+zfence = (-1, 5.5)
 
 
 
@@ -16,11 +16,21 @@ def callback(data):
     gps = data.data
     print(gps)
     if gps[0] < xfence[0] or gps[0] > xfence[1] or gps[1] < yfence[0] or gps[1] > yfence[1] or gps[2] < zfence[0] or gps[2] > zfence[1]:
-        #print("breached")
-        pub.publish("breached")
+        print("breached")
+        #pub.publish("breached")
+        diff = Float32MultiArray()
+        xneg = min(0, gps[0]-xfence[0])
+        xpos = max(0, gps[0]-xfence[1])
+        yneg = min(0, gps[1]-yfence[0])
+        ypos = max(0, gps[1]-yfence[1])
+        zneg = min(0, gps[2]-zfence[0])
+        zpos = max(0, gps[2]-zfence[1])
+        diff.data = [ xneg if not xpos else xpos, yneg if not ypos else ypos, zneg if not zpos else zpos ]
+        pub.publish(diff)
     else:
         #print("not breached")
-        pub.publish("not breached")
+        #pub.publish(Empty)
+        pass
 
 
 def listener():
