@@ -25,7 +25,7 @@ def callback(data):
         ypos = max(0, gps[1]-yfence[1])
         zneg = min(0, gps[2]-zfence[0])
         zpos = max(0, gps[2]-zfence[1])
-        diff.data = [ xneg if not xpos else xpos, yneg if not ypos else ypos, zneg if not zpos else zpos ]
+        diff.data = [ -xneg if not xpos else -xpos, -yneg if not ypos else -ypos, -zneg if not zpos else -zpos ]
         pub.publish(diff)
     else:
         #print("not breached")
