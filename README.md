@@ -2,15 +2,15 @@
 
 Makes the simulation's Quadricopter a ROSnode which the master node can communicate with.
 
-1. Build catkin_ws and source it using setup.sh
+1. start roscore
+`roscore`
+
+2. start coppeliasim
+
+3. Build catkin_ws and source it using setup.sh
 ```
 source setup.sh
 ```
-
-2. start roscore
-`roscore`
-
-3. start coppeliasim
 
 4. start the breach detector
 `rosrun geofencer breach_detector.py`
