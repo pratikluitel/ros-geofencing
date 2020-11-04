@@ -6,7 +6,7 @@
 "type": "Feature",
 "geometry": {
 "type": "Polygon",
-"coordinates": [ [-2, -2], [-2, 2], [2, -2], [2, 2] ]
+"coordinates": [ [-2, -2], [-2, 2], [2, 2], [2, -2] ]
 }
 }
 ]

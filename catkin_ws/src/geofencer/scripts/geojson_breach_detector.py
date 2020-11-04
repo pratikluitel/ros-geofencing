@@ -17,7 +17,7 @@ def callback(data):
     gps = data.data
     print(gps)
     p = Point(gps[0], gps[1])
-    if p.within(polygon) or gps[2] < zfence[0] or gps[2] > zfence[1]:
+    if not p.within(polygon) or gps[2] < zfence[0] or gps[2] > zfence[1]:
         print("breached")
         pub.publish("breached")
         '''
