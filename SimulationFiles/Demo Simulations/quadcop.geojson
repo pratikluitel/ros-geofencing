@@ -1,0 +1,13 @@
+{
+"type": "FeatureCollection",
+"name": "quadcop",
+"features": [
+{
+"type": "Feature",
+"geometry": {
+"type": "Polygon",
+"coordinates": [ [-4.375, -4.4], [-4.375, 4.35], [4.375, -4.4], [4.375, -4.35] ]
+}
+}
+]
+}
