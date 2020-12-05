@@ -162,6 +162,7 @@ include_directories(
 catkin_install_python(PROGRAMS
    scripts/breach_detector.py
    scripts/geojson_breach_detector.py
+   scripts/control.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
