@@ -4,8 +4,10 @@ A Quadcopter geofencing simulation.
 
 ## Dependencies
 
-ROS Melodic Morena - [Installation](http://wiki.ros.org/melodic/Installation/Ubuntu) - install ros-melodic-desktop
-Coppelia Sim
+[ROS Melodic Morena](http://wiki.ros.org/melodic/Installation/Ubuntu) install the desktop version (ros-melodic-desktop)
+
+[Coppelia Sim](https://www.coppeliarobotics.com/downloads)
+
 python shapely 
 ```
 sudo apt install python-shapely
