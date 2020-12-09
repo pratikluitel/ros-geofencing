@@ -75,7 +75,10 @@ if __name__ == '__main__':
 
     for feature in data["features"]:
         if feature["geometry"]["type"] == "Polygon":
-            polys.append(Polygon(feature["geometry"]["coordinates"]))
+	#subtracting offsets here, the offsets are in the geojson file, think this messes up the standard geojson format
+            featCoor = [[i[0]-data["offset"][0],i[1]-data["offset"][1]] for i in feature["geometry"]["coordinates"][0]]
+            print(featCoor)
+            polys.append(Polygon(featCoor))
 
     print("Node running")
     listener()

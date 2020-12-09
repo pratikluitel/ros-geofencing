@@ -1,6 +1,7 @@
 {
 "type": "FeatureCollection",
 "name": "quadcop",
+"offset":[0,0],
 "features": [
 {
 "type": "Feature",
