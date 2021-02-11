@@ -4,21 +4,11 @@ import sys
 import json
 import rospy
 import numpy as np
-from shapely.geometry import Point, Polygon
 from std_msgs.msg import Float32MultiArray, String
 
 pub = rospy.Publisher('/pointStack', Float32MultiArray, queue_size=100)
-breachPub = rospy.Publisher('/geofence_status', String, queue_size=100)
-
-#for kicks
-zfence = (-1, 5.5)
-polys = []
 
 stack = []
-
-#mostly for kicks
-breach = False
-
 
 def callback(data):
     print("Data received, processing")
@@ -42,22 +32,6 @@ def callback(data):
     
     if len(stack) > 20:
         stack.pop(0)
-
-    p = Point(gps[0], gps[1])
-
-    for poly in polys:
-        if p.within(poly):
-            breach = True
-            breachPub.publish("breached")
-            return
-
-    if gps[2] < zfence[0] or gps[2] > zfence[1]:
-        breach = True
-        breachPub.publish("breached")
-        return
-    
-    breach = False
-    breachPub.publish(" ")
     pass
 
 def listener():
@@ -70,15 +44,5 @@ def listener():
         rate.sleep()
 
 if __name__ == '__main__':
-    with open(sys.argv[1]) as f:
-        data = json.load(f)
-
-    for feature in data["features"]:
-        if feature["geometry"]["type"] == "Polygon":
-	#subtracting offsets here, the offsets are in the geojson file, think this messes up the standard geojson format
-            featCoor = [[i[0]-data["offset"][0],i[1]-data["offset"][1]] for i in feature["geometry"]["coordinates"][0]]
-            print(featCoor)
-            polys.append(Polygon(featCoor))
-
     print("Node running")
     listener()

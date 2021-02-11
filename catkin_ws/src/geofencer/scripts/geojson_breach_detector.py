@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import sys
-import json
 import rospy
 from shapely.geometry import Point, Polygon
 from std_msgs.msg import String, Float32MultiArray, Empty

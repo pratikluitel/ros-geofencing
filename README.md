@@ -35,9 +35,11 @@ source setup.sh
 `parkscene.geojson` file.
 
 5. Start the breach detector and rerouter script in a new terminal.
-```
-rosrun geofencer control.py parkscene.geojson
-```
+
+`rosrun geofencer breach_detector.py [geojson file for scene]`
+
+`rosrun geofencer control.py`
+
 
 6. You can control the Quadricopter by using arrow keys.
 
