@@ -12,6 +12,8 @@ from shapely.geometry.polygon import Polygon
 
 from std_msgs.msg import String, Float32MultiArray, Empty
 
+pub = rospy.Publisher('/planned_path', Float32MultiArray, queue_size=100)
+
 visited_points={}
 
 def make_path(start, end):
@@ -149,23 +151,32 @@ def listener(Polygons):
   start_sub=rospy.wait_for_message('/start_point', Float32MultiArray)
   start_point = (start_sub.data[0],start_sub.data[1]) #no z consideration
 
-  print('start:',start_point)
-
   #for initial tests, we supply end point manually thru rostopic pub
   end_sub=rospy.wait_for_message('/end_point', Float32MultiArray)
   end_point = (end_sub.data[0],end_sub.data[1])
 
-  print('end:',end_point)
   planned_path = find_paths(Point(start_point), Point(end_point), Polygons)
-
+  
   for poly in Polygons:
     plt.plot(poly.exterior.xy[0],poly.exterior.xy[1], 'g')
   for path in planned_path:
     plt.plot(path.xy[0],path.xy[1], 'rx-')
   plt.show()
+  
+  info = Float32MultiArray()
 
+  msg = [[path.coords[0][0],path.coords[0][1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5] for path in planned_path] # have to do this, otherwise can't send data to coppsim
+  msg.append([planned_path[-1].coords[-1][0],planned_path[-1].coords[-1][1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5])
+  
+  # send a flattened list, because lua cant handle multiple dimensions
+  # format - [1,2,3,4,5,6,7,8,9] = 1st point in path - (1,2), 2nd point - (3,4), etc.
+  # every pair is a subsequent point in the path
+
+  info.data = list(np.array(msg).reshape((11*len(msg),)))
+  pub.publish(info)
+  
   while not rospy.is_shutdown():
-      rate.sleep()
+    rate.sleep()
 
 if __name__ == '__main__':
   print("Node running")
