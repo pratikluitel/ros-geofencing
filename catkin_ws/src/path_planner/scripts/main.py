@@ -189,7 +189,7 @@ if __name__ == '__main__':
   for feature in data["features"]:
       if feature["geometry"]["type"] == "Polygon":
           # subtracting offsets here, the offsets are in the geojson file
-          featCoor = [[i[0]-data["offset"][0],i[1]-data["offset"][1]]
+          featCoor = [[(i[0]-data["offset"][0])*data["scale"], (i[1]-data["offset"][1])*data["scale"]]
   for i in feature["geometry"]["coordinates"][0]]
       p = MultiPoint(featCoor[:-1])
       Polygons.append(Polygon(featCoor[:-1]))
