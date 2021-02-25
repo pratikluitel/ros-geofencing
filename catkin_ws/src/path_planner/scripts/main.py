@@ -78,6 +78,7 @@ def outermost_points(polys, start, end):
   #find vertices on each side of the line
   sides=[[],[]]
   for point in vis_points:
+
     if LinearRing([start.coords[0], end.coords[0], point]).is_ccw:
       sides[0].append(point)
     else:
@@ -86,6 +87,7 @@ def outermost_points(polys, start, end):
   #find extreme points on each side
   outermost_points=[]
   path = make_path(start,end)
+
   for side in sides:
     farthest_dist_side = 0
     farthest_idx_side = 0
@@ -126,8 +128,10 @@ def find_paths(start, end, polys):
       # to prevent oscillation between same locally optimal points, keep track of visited points
       if str(Point(outermost_pts[0])) in visited_points: 
         temp_end = Point(outermost_pts[1])
+
       elif str(Point(outermost_pts[1])) in visited_points:
         temp_end = Point(outermost_pts[0])
+
       else:
         flag = end.distance(Point(outermost_pts[0])) < end.distance(Point(outermost_pts[1]))
         temp_end = Point(outermost_pts[0]) if flag else Point(outermost_pts[1])
@@ -152,15 +156,20 @@ def listener(Polygons):
   start_point = (start_sub.data[0],start_sub.data[1]) #no z consideration
 
   #for initial tests, we supply end point manually thru rostopic pub
-  end_sub=rospy.wait_for_message('/end_point', Float32MultiArray)
-  end_point = (end_sub.data[0],end_sub.data[1])
+  #end_sub=rospy.wait_for_message('/end_point', Float32MultiArray)
+  #end_point = (end_sub.data[0],end_sub.data[1])
+
+  # a good spread of points to use for demo
+  end_points = [(23,-137),(-9.7,-99.6),(100,88)]  #making it static for now, the last point shows that the algo does not find optimum path all the time as the algo is approximate - but its speed makes up for it
+  end_point = end_points[2]
 
   planned_path = find_paths(Point(start_point), Point(end_point), Polygons)
-  
+
   for poly in Polygons:
     plt.plot(poly.exterior.xy[0],poly.exterior.xy[1], 'g')
   for path in planned_path:
     plt.plot(path.xy[0],path.xy[1], 'rx-')
+  plt.scatter([i[0] for i in start_point,end_point],[j[1] for j in start_point,end_point])
   plt.show()
   
   info = Float32MultiArray()
@@ -190,7 +199,9 @@ if __name__ == '__main__':
       if feature["geometry"]["type"] == "Polygon":
           # subtracting offsets here, the offsets are in the geojson file
           featCoor = [[(i[0]-data["offset"][0])*data["scale"], (i[1]-data["offset"][1])*data["scale"]]
+
   for i in feature["geometry"]["coordinates"][0]]
       p = MultiPoint(featCoor[:-1])
       Polygons.append(Polygon(featCoor[:-1]))
+
   listener(Polygons)
