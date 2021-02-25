@@ -215,9 +215,9 @@ def listener(Polygons):
 
   for waypoint in waypoints:
     mid = ((start[0]+waypoint[0])/2,(start[1]+waypoint[1])/2)
-    msg = [format_for_sim(start,start_sub.data[2])]
-    msg.append(format_for_sim(mid,start_sub.data[2]))
-    msg.append(format_for_sim(waypoint,start_sub.data[2]))
+    msg = [[start[0],start[1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5]]
+    msg.append([mid[0],mid[1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5])
+    msg.append([waypoint[0],waypoint[1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5])
 
     info_path.data = list(np.array(msg).reshape((11*len(msg),))) # have to do this, otherwise can't send data to coppsim
     pub.publish(info_path)
@@ -232,7 +232,7 @@ def listener(Polygons):
       GPS_data = (gpssub.data[0],gpssub.data[1])
 
       if geofence_status != ' ': #if the fence is breached, our plan changes -> new path = from current GPS point to the next waypoint
-        planned_path = find_paths(Point(prev_GPS_data), Point(waypoint), Polygons)
+        planned_path_coords = vp3_path(Point(prev_GPS_data), Point(waypoint), Polygons)
 
         #for debug purposes
         #for poly in Polygons:
@@ -245,8 +245,8 @@ def listener(Polygons):
         info = Float32MultiArray()
 
         #sending to the simulator
-        msg = [format_for_sim(path.coords[0],start_sub.data[2]) for path in planned_path]
-        msg.append(format_for_sim(planned_path[-1].coords[-1],start_sub.data[2]))
+        msg = [[coord[0],coord[1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5] for coord in planned_path_coords]
+        msg.append([planned_path_coords[-1][0],planned_path_coords[-1][1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5])
         
         info.data = list(np.array(msg).reshape((11*len(msg),)))
         pub.publish(info)

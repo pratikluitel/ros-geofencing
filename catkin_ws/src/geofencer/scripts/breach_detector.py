@@ -13,7 +13,6 @@ zfence = (-1, 5.5)
 polys = []
 
 def callback(data):
-    print("Data received, processing")
     gps = data.data
 
     p = Point(gps[0], gps[1])
@@ -27,7 +26,6 @@ def callback(data):
         pub.publish("breached")
         return
 
-    print("not breached")
     pub.publish(" ")
     pass
 
@@ -52,6 +50,5 @@ if __name__ == '__main__':
         if feature["geometry"]["type"] == "Polygon":
 	#subtracting offsets here, the offsets are in the geojson file, think this messes up the standard geojson format
             featCoor = [[(i[0]-data["offset"][0])*data["scale"], (i[1]-data["offset"][1])*data["scale"]] for i in feature["geometry"]["coordinates"][0]]
-            print(featCoor)
             polys.append(Polygon(featCoor))
     listener()
