@@ -13,6 +13,7 @@ from shapely.geometry.polygon import Polygon
 from std_msgs.msg import String, Float32MultiArray, Empty
 
 pub = rospy.Publisher('/planned_path', Float32MultiArray, queue_size=100)
+plan_pub = rospy.Publisher('/path_plan', String,queue_size=100)
 
 visited_points={}
 
@@ -148,41 +149,84 @@ def find_paths(start, end, polys):
 
       return planned_path
 
+def format_for_sim(point, z):
+  return [point[0],point[1],z,0,0,0,1.0,0,15,0.5,0.5]
+
 def listener(Polygons):
   rospy.init_node('main', anonymous=True)
 
   rate = rospy.Rate(100)
-  start_sub=rospy.wait_for_message('/start_point', Float32MultiArray)
-  start_point = (start_sub.data[0],start_sub.data[1]) #no z consideration
-
-  #for initial tests, we supply end point manually thru rostopic pub
-  #end_sub=rospy.wait_for_message('/end_point', Float32MultiArray)
-  #end_point = (end_sub.data[0],end_sub.data[1])
+  start_sub=rospy.wait_for_message('/GPSdata', Float32MultiArray)
+  start = (start_sub.data[0],start_sub.data[1]) #no z consideration
 
   # a good spread of points to use for demo
-  end_points = [(23,-137),(-9.7,-99.6),(100,88)]  #making it static for now, the last point shows that the algo does not find optimum path all the time as the algo is approximate - but its speed makes up for it
-  end_point = end_points[0]
+  waypoints = [(100,0),(100,88),(-9.7,-99.6)]
 
-  planned_path = find_paths(Point(start_point), Point(end_point), Polygons)
+  # for debug purposes
+  pltw = [start]+waypoints
 
   for poly in Polygons:
     plt.plot(poly.exterior.xy[0],poly.exterior.xy[1], 'g')
-  for path in planned_path:
-    plt.plot(path.xy[0],path.xy[1], 'rx-')
-  plt.scatter([i[0] for i in start_point,end_point],[j[1] for j in start_point,end_point])
+  lines =[]
+  for i in range(len(pltw)-1):
+    lines.append(LineString([pltw[i],pltw[i+1]]))
+  for path in pltw:
+    plt.plot(path[0],path[1], 'rx-')
   plt.show()
   
-  info = Float32MultiArray()
+  info_path = Float32MultiArray()
 
-  msg = [[path.coords[0][0],path.coords[0][1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5] for path in planned_path] # have to do this, otherwise can't send data to coppsim
-  msg.append([planned_path[-1].coords[-1][0],planned_path[-1].coords[-1][1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5])
-  
-  # send a flattened list, because lua cant handle multiple dimensions
-  # format - [1,2,3,4,5,6,7,8,9] = 1st point in path - (1,2), 2nd point - (3,4), etc.
-  # every pair is a subsequent point in the path
+  for waypoint in waypoints:
+    mid = ((start[0]+waypoint[0])/2,(start[1]+waypoint[1])/2)
+    msg = [format_for_sim(start,start_sub.data[2])]
+    msg.append(format_for_sim(mid,start_sub.data[2]))
+    msg.append(format_for_sim(waypoint,start_sub.data[2]))
 
-  info.data = list(np.array(msg).reshape((11*len(msg),)))
-  pub.publish(info)
+    info_path.data = list(np.array(msg).reshape((11*len(msg),))) # have to do this, otherwise can't send data to coppsim
+    pub.publish(info_path)
+
+
+    while True:
+      geosub = rospy.wait_for_message('/geofence_status', String)
+      gpssub = rospy.wait_for_message('/GPSdata', Float32MultiArray)
+
+      #extract data
+      geofence_status = geosub.data
+      GPS_data = (gpssub.data[0],gpssub.data[1])
+
+      if geofence_status != ' ': #if the fence is breached, our plan changes -> new path = from current GPS point to the next waypoint
+        planned_path = find_paths(Point(prev_GPS_data), Point(waypoint), Polygons)
+
+        #for debug purposes
+        #for poly in Polygons:
+        #  plt.plot(poly.exterior.xy[0],poly.exterior.xy[1], 'g')
+        #for path in planned_path:
+        #  plt.plot(path.xy[0],path.xy[1], 'rx-')
+        #plt.scatter([i[0] for i in GPS_data,waypoint],[j[1] for j in GPS_data,waypoint])
+        #plt.show()
+
+        info = Float32MultiArray()
+
+        #sending to the simulator
+        msg = [format_for_sim(path.coords[0],start_sub.data[2]) for path in planned_path]
+        msg.append(format_for_sim(planned_path[-1].coords[-1],start_sub.data[2]))
+        
+        info.data = list(np.array(msg).reshape((11*len(msg),)))
+        pub.publish(info)
+
+        plan_pub.publish('btwn_wypts')
+      
+
+      path_plan = rospy.wait_for_message('/path_plan', String)
+      if path_plan.data == 'nil': #continue till the path completes
+        break
+      
+      for poly in Polygons:
+        if Point(GPS_data).within(poly):
+          print(GPS_data)
+      prev_GPS_data = GPS_data
+
+    start = waypoint
   
   while not rospy.is_shutdown():
     rate.sleep()

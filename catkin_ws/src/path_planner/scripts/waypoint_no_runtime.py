@@ -148,39 +148,59 @@ def find_paths(start, end, polys):
 
       return planned_path
 
+def format_for_sim(point, z):
+  return [point[0],point[1],z,0,0,0,1.0,0,15,0.5,0.5]
+
 def listener(Polygons):
   rospy.init_node('main', anonymous=True)
 
   rate = rospy.Rate(100)
-  start_sub=rospy.wait_for_message('/start_point', Float32MultiArray)
-  start_point = (start_sub.data[0],start_sub.data[1]) #no z consideration
-
-  #for initial tests, we supply end point manually thru rostopic pub
-  #end_sub=rospy.wait_for_message('/end_point', Float32MultiArray)
-  #end_point = (end_sub.data[0],end_sub.data[1])
+  start_sub=rospy.wait_for_message('/GPSdata', Float32MultiArray)
+  start = (start_sub.data[0],start_sub.data[1]) #no z consideration
 
   # a good spread of points to use for demo
-  end_points = [(23,-137),(-9.7,-99.6),(100,88)]  #making it static for now, the last point shows that the algo does not find optimum path all the time as the algo is approximate - but its speed makes up for it
-  end_point = end_points[0]
+  waypoints = [(100,0),(66,70),(-9.7,-99.6)]
 
-  planned_path = find_paths(Point(start_point), Point(end_point), Polygons)
+  fig, axs = plt.subplots(2)
+
+  # for debug purposes
+  pltw = [start]+waypoints
 
   for poly in Polygons:
-    plt.plot(poly.exterior.xy[0],poly.exterior.xy[1], 'g')
-  for path in planned_path:
-    plt.plot(path.xy[0],path.xy[1], 'rx-')
-  plt.scatter([i[0] for i in start_point,end_point],[j[1] for j in start_point,end_point])
-  plt.show()
-  
+    axs[0].plot(poly.exterior.xy[0],poly.exterior.xy[1], 'g')
+
+  lines =[]
+  for i in range(len(pltw)-1):
+    lines.append(make_path(pltw[i],pltw[i+1]))
+  for path in lines:
+    axs[0].plot(path.xy[0],path.xy[1], 'rx-')
+
   info = Float32MultiArray()
 
-  msg = [[path.coords[0][0],path.coords[0][1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5] for path in planned_path] # have to do this, otherwise can't send data to coppsim
-  msg.append([planned_path[-1].coords[-1][0],planned_path[-1].coords[-1][1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5])
+  planned_path_unflattened = []
+  for waypoint in waypoints:
+    fl = False
+    for poly in Polygons:
+      if Point(waypoint).within(poly):
+        fl = True
+    if fl:
+      continue
+    planned_path_seg = find_paths(Point(start), Point(waypoint), Polygons)
+    planned_path_unflattened.append(planned_path_seg)
+    start = waypoint
   
-  # send a flattened list, because lua cant handle multiple dimensions
-  # format - [1,2,3,4,5,6,7,8,9] = 1st point in path - (1,2), 2nd point - (3,4), etc.
-  # every pair is a subsequent point in the path
+  planned_path = [item for sublist in planned_path_unflattened for item in sublist]
 
+  #for debug purposes
+  for poly in Polygons:
+    axs[1].plot(poly.exterior.xy[0],poly.exterior.xy[1], 'g')
+  for path in planned_path:
+    axs[1].plot(path.xy[0],path.xy[1], 'rx-')
+  plt.show()
+
+  msg = [format_for_sim(path.coords[0],start_sub.data[2]) for path in planned_path]
+  msg.append(format_for_sim(planned_path[-1].coords[-1],start_sub.data[2]))
+        
   info.data = list(np.array(msg).reshape((11*len(msg),)))
   pub.publish(info)
   
@@ -196,13 +216,13 @@ if __name__ == '__main__':
   Polygons = []
 
   for feature in data["features"]:
-      if feature["geometry"]["type"] == "Polygon":
-          # subtracting offsets here, the offsets are in the geojson file
-          featCoor = [[(i[0]-data["offset"][0])*data["scale"], (i[1]-data["offset"][1])*data["scale"]]
+    if feature["geometry"]["type"] == "Polygon":
+      # subtracting offsets here, the offsets are in the geojson file
+      featCoor = [[(i[0]-data["offset"][0])*data["scale"], (i[1]-data["offset"][1])*data["scale"]]
 
   for i in feature["geometry"]["coordinates"][0]]
-      p = MultiPoint(featCoor[:-1])
-      Polygons.append(Polygon(featCoor[:-1]))
+    p = MultiPoint(featCoor[:-1])
+    Polygons.append(Polygon(featCoor[:-1]))
   
   #for debug purposes
   #for poly in Polygons:
