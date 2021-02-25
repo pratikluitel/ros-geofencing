@@ -25,21 +25,41 @@ roscore
 path_to_coppeliasim/coppeliaSim.sh
 ```
 
-3. Build catkin_ws and source it using setup.sh in a new terminal.
-```
-source setup.sh
-```
-
-4. Open the simulation in CoppeliaSim - the latest is in 
+3. Open the simulation in CoppeliaSim - the latest is in 
 `SimulationFiles/Demo Simulations/parkscene.ttt`. The boundaries for the geofence are in the 
 `parkscene.geojson` file.
 
-5. Start the breach detector and rerouter script in a new terminal.
+#### Note: The final demo, using the pulchowk campus geojson map is in the sprint_pulchowk_obj.ttt file in the same folder
+
+## To run the breach detection test with manual w a s d keyboard control:
+
+`./manual_control_breach_test.sh`
+
+## To run the path planning test:
+
+`./path_follow_test.sh`
+
+Note: the end points can be changed by changing the end_point variable in `catkin_ws/src/path_planner/scripts/main.py`
+
+### To run breach detection in a new geojson file:
+
+Source the setup file:
+
+`source setup.sh`
+
+Start the breach detector and rerouter script in two new terminals as:
 
 `rosrun geofencer breach_detector.py [geojson file for scene]`
 
 `rosrun geofencer control.py`
 
+### To run the path planner in a new geojson map:
 
-6. You can control the Quadricopter by using arrow keys.
+Source the setup file:
 
+`source setup.sh`
+
+`rosrun path_planner main.py [geojson file for scene]`
+
+
+Note: The pulchowk map's offseted coordinates are in the Offsetted_Map.png file

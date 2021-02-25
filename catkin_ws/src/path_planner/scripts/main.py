@@ -203,5 +203,10 @@ if __name__ == '__main__':
   for i in feature["geometry"]["coordinates"][0]]
       p = MultiPoint(featCoor[:-1])
       Polygons.append(Polygon(featCoor[:-1]))
+  
+  #for debug purposes
+  #for poly in Polygons:
+  #  plt.plot(poly.exterior.xy[0],poly.exterior.xy[1], 'g')
+  #plt.show()
 
   listener(Polygons)
