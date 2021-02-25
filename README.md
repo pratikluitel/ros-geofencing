@@ -39,6 +39,7 @@ path_to_coppeliasim/coppeliaSim.sh
 
 `./path_follow_test.sh`
 
+Then press the 'o' key in CoppeliaSim to record the start point (which right now is the point where the drone is at)
 Note: the end points can be changed by changing the end_point variable in `catkin_ws/src/path_planner/scripts/main.py`
 
 ### To run breach detection in a new geojson file:
