@@ -42,7 +42,7 @@ path_to_coppeliasim/coppeliaSim.sh
 Then press the 'o' key in CoppeliaSim to record the start point (which right now is the point where the drone is at)
 Note: the end points can be changed by changing the end_point variable in `catkin_ws/src/path_planner/scripts/main.py`
 
-### To run breach detection in a new geojson file:
+## To run breach detection in a new geojson file:
 
 Source the setup file:
 
@@ -54,7 +54,7 @@ Start the breach detector and rerouter script in two new terminals as:
 
 `rosrun geofencer control.py`
 
-### To run the path planner in a new geojson map:
+## To run the path planner in a new geojson map:
 
 Source the setup file:
 
@@ -64,3 +64,9 @@ Source the setup file:
 
 
 Note: The pulchowk map's offseted coordinates are in the Offsetted_Map.png file
+
+## To run the waypoint follower:
+
+`./waypoint_test.sh`
+
+to change/add waypoints - edit the `waypoints` list in `catkin_ws/src/path_planner/scripts/waypoint.py`

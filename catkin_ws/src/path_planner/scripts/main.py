@@ -14,139 +14,182 @@ from std_msgs.msg import String, Float32MultiArray, Empty
 
 pub = rospy.Publisher('/planned_path', Float32MultiArray, queue_size=100)
 
-visited_points={}
+def segment_optimize(polys, wp):
+    op = [wp[0], wp[1]]
+    if len(wp) >= 3:
+        for i in range(2, len(wp)):
+            line = LineString([op[len(op)-2], wp[i]])
+            intersects = False
+            for p in polys:
+                if line.intersects(p):
+                    shape = line.intersection(p)
+                    if (shape.geom_type != 'Point' and shape.geom_type != 'MultiPoint'):
+                        intersects = True
+                        break
+
+            if not intersects:
+                op[len(op)-1] = wp[i]
+            else:
+                op.append(wp[i])
+
+    return op
 
 def make_path(start, end):
-  path = LineString([start, end])
-  return path
+    path = LineString([start, end])
+    return path
 
-def nearest_polygon(start,end,polys):
-  """
-  Finds the index of the nearest polygon to the start points
-  inputs: start point (start), polygon array (polys)
-  output: index of nearest polygon in the array
-  """
-  nearest_dist = float('inf')
-  nearest_idx = 0
-  path = make_path(start,end)
 
-  for idx, poly in enumerate(polys):
-    if path.crosses(poly) and start.distance(poly)<nearest_dist:
-      nearest_dist = start.distance(poly)
-      nearest_idx = idx
-  return nearest_idx
+def nearest_polygon(start, end, polys):
+    """
+    Finds the index of the nearest polygon to the start points
+    inputs: start point (start), polygon array (polys)
+    output: index of nearest polygon in the array
+    """
+    nearest_dist = float('inf')
+    nearest_idx = 0
+    path = make_path(start, end)
+
+    for idx, poly in enumerate(polys):
+        if path.crosses(poly) and start.distance(poly) < nearest_dist:
+            nearest_dist = start.distance(poly)
+            nearest_idx = idx
+    return nearest_idx
+
 
 def visible_points(start, poly):
-  """
-  Finds the vertices of a polygon that are visible from the start point
-  inputs: start point (start), polygon
-  """
-  vis_points = []
-  for coord in list(poly.exterior.coords[:-1]):
-    line = LineString([start, Point(coord[0],coord[1])])
+    """
+    Finds the vertices of a polygon that are visible from the start point
+    inputs: start point (start), polygon
+    """
+    vis_points = []
+    for coord in list(poly.exterior.coords[:-1]):
+        line = LineString([start, Point(coord[0], coord[1])])
 
-    # vertex is visible if the line it forms with start point intersects the polygon at a point,
-    # not a line or any other shape
-    if line.intersection(poly).geom_type == 'Point':
-      vis_points.append(coord)
-  return vis_points
+        # vertex is visible if the line it forms with start point intersects the polygon at a point,
+        # not a line or any other shape
+        if line.intersection(poly).geom_type == 'Point':
+            vis_points.append(coord)
+    return vis_points
+
 
 def adjacent_points(poly, vertex):
-  """
-  input: polygon, a vertex of the polygon
-  output: adjacent points of a vertex in a polygon
-  """
-  coords = list(poly.exterior.coords)[:-1]
-  idx = coords.index(vertex)
-  return [coords[idx-1],coords[(idx+1)%len(coords)]]
+    """
+    input: polygon, a vertex of the polygon
+    output: adjacent points of a vertex in a polygon
+    """
+    coords = list(poly.exterior.coords)[:-1]
+    idx = coords.index(vertex)
+    return [coords[idx-1], coords[(idx+1) % len(coords)]]
+
 
 def outermost_points(polys, start, end):
-  """
-  Finds the outermost points of the nearest polygon that falls in line of sight of path
-  inputs: polygon array (polys), path
-  output: two outermost points on nearest polygon
-  """
+    """
+    Finds the outermost points of the nearest polygon that falls in line of sight of path
+    inputs: polygon array (polys), path
+    output: two outermost points on nearest polygon
+    """
 
-  nearest_idx = nearest_polygon(start,end,polys)
-  
-  #find visible vertices of the nearest polygon
-  vis_points = visible_points(start, polys[nearest_idx])
-  
-  if len(vis_points)<2:
-    return adjacent_points(polys[nearest_idx],(start.x,start.y))
-    
-  #find vertices on each side of the line
-  sides=[[],[]]
-  for point in vis_points:
+    nearest_idx = nearest_polygon(start, end, polys)
 
-    if LinearRing([start.coords[0], end.coords[0], point]).is_ccw:
-      sides[0].append(point)
-    else:
-      sides[1].append(point)
-  
-  #find extreme points on each side
-  outermost_points=[]
-  path = make_path(start,end)
+    # find visible vertices of the nearest polygon
+    vis_points = visible_points(start, polys[nearest_idx])
 
-  for side in sides:
-    farthest_dist_side = 0
-    farthest_idx_side = 0
-    if len(side)!=0:
-      for idx, point in enumerate(side):
-        if Point(point).distance(path)>farthest_dist_side:
-          farthest_dist_side = Point(point).distance(path)
-          farthest_idx_side = idx
-      outermost_points.append(side[farthest_idx_side])
-    else:
-      outermost_points.append((None, None)) #i.e. whole side is invisible
+    if len(vis_points) < 2:
+        return adjacent_points(polys[nearest_idx], (start.x, start.y))
 
-  #find extreme points on each side
-  return outermost_points
+    # find vertices on each side of the line
+    sides = [[], []]
+    for point in vis_points:
+        if LinearRing([start.coords[0], end.coords[0], point]).is_ccw:
+            sides[0].append(point)
+        else:
+            sides[1].append(point)
 
-def find_paths(start, end, polys):
-  """
-  inputs: start point, end point, map - polygons
-  output: a list of paths
-  """
-  tempo_polys = sorted(polys,key=lambda x: x.distance(start), reverse=False)[:] # sorted list of polygons by distance from start point
-  temp_start = start
+    # find extreme points on each side
+    outermost_points = []
+    path = make_path(start, end)
+    for side in sides:
+        farthest_dist_side = 0
+        farthest_idx_side = 0
+        if len(side) != 0:
+            for idx, point in enumerate(side):
+                if Point(point).distance(path) > farthest_dist_side:
+                    farthest_dist_side = Point(point).distance(path)
+                    farthest_idx_side = idx
+            outermost_points.append(side[farthest_idx_side])
+        else:
+            # i.e. whole side is invisible
+            outermost_points.append((None, None))
 
-  planned_path = []
+    # find extreme points on each side
+    return outermost_points
 
-  while True:
-    temp_polys = tempo_polys # discard previous polygon
-    temp_path = make_path(temp_start,end)
 
-    #checks if any polygon crosses path, if not, loop can break as there is a direct path to the end
-    crosses = False
-    for poly in temp_polys:
-      crosses = True if temp_path.crosses(poly) == True else crosses
+def vp3_path(start, end, polys):
+    visited_points = {}
 
-    if crosses:
-      outermost_pts = outermost_points(temp_polys,Point(temp_start),Point(end))
+    def find_paths(start, end, polys):
+        """
+        inputs: start point, end point, map - polygons
+        output: a list of paths
+        """
+        tempo_polys = sorted(polys,
+                             key=lambda x: x.distance(start),
+                             reverse=False)[:]  # sorted list of polygons by distance from start point
+        temp_start = start
 
-      # to prevent oscillation between same locally optimal points, keep track of visited points
-      if str(Point(outermost_pts[0])) in visited_points: 
-        temp_end = Point(outermost_pts[1])
+        planned_path = []
 
-      elif str(Point(outermost_pts[1])) in visited_points:
-        temp_end = Point(outermost_pts[0])
+        while True:
+            temp_polys = tempo_polys  # discard previous polygon
+            temp_path = make_path(temp_start, end)
 
-      else:
-        flag = end.distance(Point(outermost_pts[0])) < end.distance(Point(outermost_pts[1]))
-        temp_end = Point(outermost_pts[0]) if flag else Point(outermost_pts[1])
+            # checks if any polygon crosses path, if not, loop can break as there is a direct path to the end
+            crosses = False
+            for poly in temp_polys:
+                crosses = True if temp_path.crosses(poly) == True else crosses
 
-      new_paths = find_paths(temp_start,temp_end,temp_polys)
-      for path in new_paths:
-        planned_path.append(path)
-      
-      visited_points[str(temp_start)] = True
-      temp_start = temp_end
-    else:
-      new_path = make_path(temp_start,end)
-      planned_path.append(new_path)
+            if crosses:
+                outermost_pts = outermost_points(
+                    temp_polys, Point(temp_start), Point(end)
+                )
 
-      return planned_path
+                # to prevent oscillation between same locally optimal points, keep track of visited points
+                if str(Point(outermost_pts[0])) in visited_points:
+                    temp_end = Point(outermost_pts[1])
+                elif str(Point(outermost_pts[1])) in visited_points:
+                    temp_end = Point(outermost_pts[0])
+                else:
+                    flag = end.distance(Point(outermost_pts[0])) < end.distance(
+                        Point(outermost_pts[1]))
+                    temp_end = Point(outermost_pts[0]) if flag else Point(
+                        outermost_pts[1])
+
+                new_paths = find_paths(temp_start, temp_end, temp_polys)
+                for path in new_paths:
+                    planned_path.append(path)
+
+                visited_points[str(temp_start)] = True
+                temp_start = temp_end
+            else:
+                new_path = make_path(temp_start, end)
+                planned_path.append(new_path)
+
+                return planned_path
+
+    planned_path = find_paths(start, end, polys)
+
+    waypoints = []
+    for i, p in enumerate(planned_path):
+        points = list(p.coords)
+        if i == 0:
+            waypoints.append(points[0])
+        waypoints.append(points[1])
+
+    optimized_csvga_path = segment_optimize(
+        polys, segment_optimize(polys, waypoints))
+
+    return optimized_csvga_path
 
 def listener(Polygons):
   rospy.init_node('main', anonymous=True)
@@ -163,19 +206,20 @@ def listener(Polygons):
   end_points = [(23,-137),(-9.7,-99.6),(100,88)]  #making it static for now, the last point shows that the algo does not find optimum path all the time as the algo is approximate - but its speed makes up for it
   end_point = end_points[0]
 
-  planned_path = find_paths(Point(start_point), Point(end_point), Polygons)
+  planned_path_coords = vp3_path(Point(start_point), Point(end_point), Polygons)
 
+  # for debug purposes
   for poly in Polygons:
     plt.plot(poly.exterior.xy[0],poly.exterior.xy[1], 'g')
-  for path in planned_path:
-    plt.plot(path.xy[0],path.xy[1], 'rx-')
+    
+  plt.plot([coord[0] for coord in planned_path_coords],[coord[1] for coord in planned_path_coords], 'rx-')
   plt.scatter([i[0] for i in start_point,end_point],[j[1] for j in start_point,end_point])
   plt.show()
   
   info = Float32MultiArray()
 
-  msg = [[path.coords[0][0],path.coords[0][1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5] for path in planned_path] # have to do this, otherwise can't send data to coppsim
-  msg.append([planned_path[-1].coords[-1][0],planned_path[-1].coords[-1][1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5])
+  msg = [[coord[0],coord[1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5] for coord in planned_path_coords] # have to do this, otherwise can't send data to coppsim
+  msg.append([planned_path_coords[-1][0],planned_path_coords[-1][1],start_sub.data[2],0,0,0,1.0,0,15,0.5,0.5])
   
   # send a flattened list, because lua cant handle multiple dimensions
   # format - [1,2,3,4,5,6,7,8,9] = 1st point in path - (1,2), 2nd point - (3,4), etc.
