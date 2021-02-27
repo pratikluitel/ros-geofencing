@@ -35,7 +35,7 @@ def callback(data):
     pass
 
 def listener():
-    rospy.init_node('main', anonymous=True)
+    rospy.init_node('controller', anonymous=True)
 
     rate = rospy.Rate(100)
     rospy.Subscriber('/GPSdata', Float32MultiArray, callback)

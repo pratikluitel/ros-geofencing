@@ -192,7 +192,7 @@ def vp3_path(start, end, polys):
     return optimized_csvga_path
 
 def listener(Polygons):
-  rospy.init_node('main', anonymous=True)
+  rospy.init_node('waypoint_follower', anonymous=True)
 
   rate = rospy.Rate(100)
   start_sub=rospy.wait_for_message('/GPSdata', Float32MultiArray)

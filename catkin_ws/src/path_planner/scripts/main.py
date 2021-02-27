@@ -192,7 +192,7 @@ def vp3_path(start, end, polys):
     return optimized_csvga_path
 
 def listener(Polygons):
-  rospy.init_node('main', anonymous=True)
+  rospy.init_node('navigator', anonymous=True)
 
   rate = rospy.Rate(100)
   start_sub=rospy.wait_for_message('/start_point', Float32MultiArray)
